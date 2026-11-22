@@ -881,8 +881,14 @@ function run(args: string[]): { code: number; out: string[] } {
 const trialEnv = process.env.MAKEFUN_ENV_URL;
 if (trialEnv !== undefined && trialEnv !== '') {
   // A trial: the kit's runner reads the checks from the env and runs this file on each one, without this variable.
-  const { runTrial } = await import('./runner.ts');
-  await runTrial(trialEnv);
+  // A trial failure (the env unreachable, a post refused) is reported as one error line, not a stack trace.
+  try {
+    const { runTrial } = await import('./runner.ts');
+    await runTrial(trialEnv);
+  } catch (err) {
+    writeSync(2, `error: trial ${err instanceof Error ? err.message : String(err)}\n`);
+    process.exitCode = 1;
+  }
 } else {
   const r = run(process.argv.slice(2));
   writeSync(1, r.out.map((l) => `${l}\n`).join(''));
